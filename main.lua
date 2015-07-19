@@ -224,10 +224,12 @@ local function changeImage()
 end
 
 local function changeColor()
-  --local c = colors[math.ceil(math.random() * #colors)]
-  --color[0] = bit.band(bit.rshift(c, 16), 0xFF)
-  --color[1] = bit.band(bit.rshift(c, 8), 0xFF)
-  --color[2] = bit.band(c, 0xFF)
+  --[[
+  local c = colors[math.ceil(math.random() * #colors)]
+  color[0] = bit.band(bit.rshift(c, 16), 0xFF)
+  color[1] = bit.band(bit.rshift(c, 8), 0xFF)
+  color[2] = bit.band(c, 0xFF)
+  ]]--
 
   color[0] = math.min(math.random() * 255 + 100, 255)
   color[1] = math.min(math.random() * 255 + 100, 255)
@@ -353,8 +355,10 @@ function love.draw()
     love.graphics.setFont(largefont)
     love.graphics.print(beattext, vcenter - (beattextw / 2), -40)
     love.graphics.setFont(tinyfont)
-    love.graphics.printf(songs[songnr].title, 10, height - 17, (width / 2) - 10, "left")
-    love.graphics.printf(image.fullname, (width / 2) + 10, height - 17, (width / 2) - 20, "right")
+    love.graphics.printf(string.format("(%i/%i) %s", songnr, #songs, songs[songnr].title
+      ), 10, height - 17, (width / 2) - 10, "left")
+    love.graphics.printf(string.format("%s (%i/%i)", image.fullname, imagenr, #images
+      ), (width / 2) + 10, height - 17, (width / 2) - 20, "right")
 
     if taiko then
       love.graphics.setColor(0, 0, 0, 100)
@@ -439,10 +443,10 @@ end
 
 function love.keypressed(b)
   if b == "up" then
-    songnr = wrap(1, songnr - 1, #songs)
+    songnr = wrap(1, songnr + 1, #songs)
     loadSong(songnr)
   elseif b == "down" then
-    songnr = wrap(1, songnr + 1, #songs)
+    songnr = wrap(1, songnr - 1, #songs)
     loadSong(songnr)
   elseif b == "lshift" or b == "rshift" then
     loadSong(math.ceil(math.random() * #songs))
