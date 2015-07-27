@@ -217,9 +217,9 @@ local function loadSong(id)
   current.source:play()
 end
 
-local function changeImage()
+local function changeImage(nr)
   if nochange then return end
-  imagenr = math.ceil(math.random() * #images)
+  imagenr = nr or math.ceil(math.random() * #images)
   image = images[imagenr]
 end
 
@@ -460,6 +460,15 @@ function love.keypressed(b)
     nochange = not nochange
   elseif b == "h" then
     hidegui = not hidegui
+
+  elseif b == "f11" then
+    love.window.setFullscreen(not love.window.getFullscreen(), "desktop")
+  elseif b == "escape" then
+    if love.window.getFullscreen() then
+      love.window.setFullscreen(false, "desktop")
+    else
+      love.event.push("quit")
+    end
 
   elseif b == "y" then taiko = true
     local now = current.source:tell("samples") - LATENCY

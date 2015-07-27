@@ -23,3 +23,5 @@ Hotkeys
 - H: Toggle onscreen text
 - Y: Taiko `o`
 - X: Taiko `x`
+- F11: Toggle fullscreen
+- Escape: Exit fullscreen or application
