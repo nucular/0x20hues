@@ -38,7 +38,7 @@ imagenr = 0
 songs = {}
 images = {}
 nochange = false
-hidegui = false
+hidegui = true
 
 beat = ""
 beatpos = 0
@@ -86,7 +86,27 @@ local function wrap(min, n, max)
   return n
 end
 
-local function loadRespack(file, name)
+
+local function changeImage(nr)
+  if nochange then return end
+  imagenr = nr or math.ceil(math.random() * #images)
+  image = images[imagenr]
+end
+
+local function changeColor()
+  local c = colors[math.ceil(math.random() * #colors)]
+  color[1] = bit.band(bit.rshift(c, 16), 0xFF)
+  color[2] = bit.band(bit.rshift(c, 8), 0xFF)
+  color[3] = bit.band(c, 0xFF)
+
+  --[[
+  color[1] = math.min(math.random() * 255 + 100, 255)
+  color[2] = math.min(math.random() * 255 + 100, 255)
+  color[3] = math.min(math.random() * 255 + 100, 255)
+  ]]--
+end
+
+local function loadRespack(file, name, draw)
   if not love.filesystem.mount(file, name) then
     return
   end
@@ -172,6 +192,25 @@ local function loadRespack(file, name)
         if image.path then
           image.data = love.graphics.newImage(image.path)
           table.insert(images, image)
+
+          if draw then
+            if math.random() >= 0.5 then
+              vblur = BLURSTRENGTH
+              hblur = 0
+            else
+              vblur = 0
+              hblur = BLURSTRENGTH
+            end
+            changeColor()
+            changeImage(#images)
+            love.graphics.clear()
+            love.graphics.origin()
+            love.draw()
+            love.graphics.setColor(255, 255, 255)
+            love.graphics.setFont(largefont)
+            love.graphics.printf("LOADING", 0, 0, 800, "center")
+            love.graphics.present()
+          end
         end
       end
     end
@@ -217,25 +256,6 @@ local function loadSong(id)
   current.source:play()
 end
 
-local function changeImage(nr)
-  if nochange then return end
-  imagenr = nr or math.ceil(math.random() * #images)
-  image = images[imagenr]
-end
-
-local function changeColor()
-  --[[
-  local c = colors[math.ceil(math.random() * #colors)]
-  color[0] = bit.band(bit.rshift(c, 16), 0xFF)
-  color[1] = bit.band(bit.rshift(c, 8), 0xFF)
-  color[2] = bit.band(c, 0xFF)
-  ]]--
-
-  color[0] = math.min(math.random() * 255 + 100, 255)
-  color[1] = math.min(math.random() * 255 + 100, 255)
-  color[2] = math.min(math.random() * 255 + 100, 255)
-end
-
 local function samplesToBeats(samples)
   return samples / (current.data:getSampleCount() / #current.rhythm)
 end
@@ -277,21 +297,22 @@ function love.load()
   love.graphics.setDefaultFilter("nearest", "nearest", 8)
   blur = love.graphics.newShader(blur)
 
-  items = love.filesystem.getDirectoryItems("respacks")
-  for i, v in ipairs(items) do
-    if v:find("zip", 3 - #v + 1, true) then
-      loadRespack("respacks/" .. v, v:sub(0, #v - 4))
-    end
-  end
-
-  loadSong(math.ceil(math.random() * #songs))
-  changeImage()
-
   fxcanvas = love.graphics.newCanvas()
   blur:send("shift", {0, 0})
 
   acccanvas = love.graphics.newCanvas(200, 20)
   acccanvas:clear(0, 0, 0)
+
+  items = love.filesystem.getDirectoryItems("respacks")
+  for i, v in ipairs(items) do
+    if v:find("zip", 3 - #v + 1, true) then
+      loadRespack("respacks/" .. v, v:sub(0, #v - 4), true)
+    end
+  end
+  hidegui = false
+
+  loadSong(math.ceil(math.random() * #songs))
+  changeImage()
 end
 
 function love.draw()
