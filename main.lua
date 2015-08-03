@@ -4,6 +4,7 @@
 local bit = require("bit")
 package.path = package.path .. ";slaxml/?.lua"
 local slax = require("slaxdom")
+local http = require("socket.http")
 
 blur = [[
 extern vec2 shift;
@@ -24,42 +25,42 @@ vec4 effect(vec4 color, Image tex, vec2 tc, vec2 pc) {
 }
 ]]
 
-BLURSTRENGTH = 0.01
-BLURDURATION = 0.1
-SHUFFLE = false
-LATENCY = 2048
+local BLURSTRENGTH = 0.01
+local BLURDURATION = 0.1
+local SHUFFLE = false
+local LATENCY = 3072
 
-taiko = false
-taikosum = 0
-taikohits = 0
+local taiko = false
+local taikosum = 0
+local taikohits = 0
 
-songnr = 0
-imagenr = 0
-songs = {}
-images = {}
-nochange = false
-hidegui = true
+local songnr = 0
+local imagenr = 0
+local songs = {}
+local images = {}
+local nochange = false
+local hidegui = true
 
-beat = ""
-beatpos = 0
+local beat = ""
+local beatpos = 0
 
-color = {0, 0, 0}
+local color = {0, 0, 0}
 
-image = nil
-loop = nil
-buildup = nil
+local image = nil
+local loop = nil
+local buildup = nil
 
-tinyfont = love.graphics.newFont("SourceCodePro-Regular.ttf", 12)
-smallfont = love.graphics.newFont("SourceCodePro-Regular.ttf", 30)
-largefont = love.graphics.newFont("SourceCodePro-Regular.ttf", 100)
+local tinyfont = love.graphics.newFont("SourceCodePro-Regular.ttf", 12)
+local smallfont = love.graphics.newFont("SourceCodePro-Regular.ttf", 30)
+local largefont = love.graphics.newFont("SourceCodePro-Regular.ttf", 100)
 
-blackout = false
-shortblackout = false
+local blackout = false
+local shortblackout = false
 
-vblur = 0
-hblur = 0
+local vblur = 0
+local hblur = 0
 
-colors = { -- old colors
+local colors = { -- old colors
   5570560, 11141120, 16711680, 21760, 5592320, 11162880, 16733440, 43520,
   5614080, 11184640, 16755200, 65280, 5635840, 11206400, 16776960, 85, 5570645,
   11141205, 16711765, 21845, 5592405, 11162965, 16733525, 43605, 5614165,
@@ -69,7 +70,7 @@ colors = { -- old colors
   11141375, 16711935, 22015, 5592575, 11163135, 16733695, 43775, 5614335,
   11184895, 16755455, 65535, 5636095, 11206655, 16777215
 }
-colors = { -- pastel colors
+local colors = { -- pastel colors
   13453898, 16443317, 10453360, 2302755, 12344664, 14521461, 10145515, 2845892,
   15715768, 7229792, 1964308, 7453816, 16570741, 11068576, 9802124, 1879160,
   16719310, 11725917, 6125259, 16645236, 16561365, 16760200, 9935530, 16745027,
@@ -206,9 +207,11 @@ local function loadRespack(file, name, draw)
             love.graphics.clear()
             love.graphics.origin()
             love.draw()
+            love.graphics.setColor(0, 0, 0, 100)
+            love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), 80)
             love.graphics.setColor(255, 255, 255)
-            love.graphics.setFont(largefont)
-            love.graphics.printf("LOADING", 0, 0, 800, "center")
+            love.graphics.setFont(smallfont)
+            love.graphics.printf("LOADING " .. name:upper(), 0, 15, 800, "center")
             love.graphics.present()
           end
         end
@@ -481,7 +484,6 @@ function love.keypressed(b)
     nochange = not nochange
   elseif b == "h" then
     hidegui = not hidegui
-
   elseif b == "f11" then
     love.window.setFullscreen(not love.window.getFullscreen(), "desktop")
   elseif b == "escape" then
