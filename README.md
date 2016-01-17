@@ -1,7 +1,9 @@
 0x20 Hues
 =========
 
-A port of [0x40 Hues](0x40hues.blogspot.com) to the Lua LÖVE engine.  
+![Screenshot](http://i.imgur.com/P7dpKUJ.png)
+
+A port of [0x40 Hues](0x40hues.blogspot.com) to the LÖVE engine.  
 Project state: *Prototyping*
 
 Usage

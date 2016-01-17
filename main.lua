@@ -6,7 +6,7 @@ package.path = package.path .. ";slaxml/?.lua"
 local slax = require("slaxdom")
 local http = require("socket.http")
 
-blur = [[
+blurshader = [[
 extern vec2 shift;
 
 const int radius = 11;
@@ -24,6 +24,14 @@ vec4 effect(vec4 color, Image tex, vec2 tc, vec2 pc) {
   return ncolor;
 }
 ]]
+blendshader = [[
+vec4 effect(vec4 color, Image tex, vec2 tc, vec2 pc) {
+  vec4 texel = Texel(tex, tc);
+  vec3 c = 1.0 - 2.0 * (1.5 - texel.rgb) * (1.0 - color.rgb);
+  return vec4(c.r, c.g, c.b, texel.a);
+}
+]]
+
 
 local BLURSTRENGTH = 0.01
 local BLURDURATION = 0.1
@@ -60,17 +68,7 @@ local shortblackout = false
 local vblur = 0
 local hblur = 0
 
-local colors = { -- old colors
-  5570560, 11141120, 16711680, 21760, 5592320, 11162880, 16733440, 43520,
-  5614080, 11184640, 16755200, 65280, 5635840, 11206400, 16776960, 85, 5570645,
-  11141205, 16711765, 21845, 5592405, 11162965, 16733525, 43605, 5614165,
-  11184725, 16755285, 65365, 5635925, 11206485, 16777045, 170, 5570730,
-  11141290, 16711850, 21930, 5592490, 11163050, 16733610, 43690, 5614250,
-  11184810, 16755370, 65450, 5636010, 11206570, 16777130, 255, 5570815,
-  11141375, 16711935, 22015, 5592575, 11163135, 16733695, 43775, 5614335,
-  11184895, 16755455, 65535, 5636095, 11206655, 16777215
-}
-local colors = { -- pastel colors
+local colors = {
   13453898, 16443317, 10453360, 2302755, 12344664, 14521461, 10145515, 2845892,
   15715768, 7229792, 1964308, 7453816, 16570741, 11068576, 9802124, 1879160,
   16719310, 11725917, 6125259, 16645236, 16561365, 16760200, 9935530, 16745027,
@@ -78,7 +76,7 @@ local colors = { -- pastel colors
   1878473, 12964070, 9323909, 7619272, 14060121, 14886251, 15605837, 2084555,
   7885225, 16751530, 16525383, 10478271, 10840399, 9075037, 4574882, 16482045,
   15526590, 16604755, 16426860, 16550316, 14407634, 1540205, 7855591, 16752777,
-  9392285, 15592941, 16728996, 16542853, 13477086, 16574595, 12968836, 16758355
+  9392285, 15592941, 16728996, 16542853, 13477086, 16574595, 12968836
 }
 
 local function wrap(min, n, max)
@@ -99,12 +97,6 @@ local function changeColor()
   color[1] = bit.band(bit.rshift(c, 16), 0xFF)
   color[2] = bit.band(bit.rshift(c, 8), 0xFF)
   color[3] = bit.band(c, 0xFF)
-
-  --[[
-  color[1] = math.min(math.random() * 255 + 100, 255)
-  color[2] = math.min(math.random() * 255 + 100, 255)
-  color[3] = math.min(math.random() * 255 + 100, 255)
-  ]]--
 end
 
 local function loadRespack(file, name, draw)
@@ -298,10 +290,11 @@ function love.load()
   math.random() math.random() math.random()
 
   love.graphics.setDefaultFilter("nearest", "nearest", 8)
-  blur = love.graphics.newShader(blur)
+  blurshader = love.graphics.newShader(blurshader)
+  blendshader = love.graphics.newShader(blendshader)
 
   fxcanvas = love.graphics.newCanvas()
-  blur:send("shift", {0, 0})
+  blurshader:send("shift", {0, 0})
 
   acccanvas = love.graphics.newCanvas(200, 20)
   acccanvas:clear(0, 0, 0)
@@ -345,15 +338,17 @@ function love.draw()
 
   fxcanvas:clear()
   love.graphics.setCanvas(fxcanvas)
-  love.graphics.setShader(blur)
-  blur:send("shift", {vblur, 0})
+  love.graphics.setShader(blurshader)
+  blurshader:send("shift", {vblur, 0})
   love.graphics.draw(image.data, xoff, height - (image.data:getHeight() * scale), 0, scale, scale)
-  blur:send("shift", {0, hblur})
+  blurshader:send("shift", {0, hblur})
   love.graphics.draw(fxcanvas, 0, 0)
   love.graphics.setShader()
   love.graphics.setCanvas()
-  love.graphics.setColor(255, 255, 255, 255 * 0.7)
+  love.graphics.setColor(color)
+  love.graphics.setShader(blendshader)
   love.graphics.draw(fxcanvas, 0, 0)
+  love.graphics.setShader()
   love.graphics.setColor(255, 255, 255)
   love.graphics.setBackgroundColor(color)
 
@@ -376,8 +371,10 @@ function love.draw()
     love.graphics.setFont(smallfont)
     love.graphics.print(rhythmtext, vcenter + (beattextw / 2), 15)
     love.graphics.print(rhythmtext:reverse(), (vcenter - (beattextw / 2)) - rhythmtextw, 15)
-    love.graphics.setFont(largefont)
-    love.graphics.print(beattext, vcenter - (beattextw / 2), -40)
+    if beattext ~= "." then
+      love.graphics.setFont(largefont)
+      love.graphics.print(beattext, vcenter - (beattextw / 2), -40)
+    end
     love.graphics.setFont(tinyfont)
     love.graphics.printf(string.format("(%i/%i) %s", songnr, #songs, songs[songnr].title
       ), 10, height - 17, (width / 2) - 10, "left")
@@ -433,8 +430,10 @@ function love.update(dt)
       changeColor()
     elseif beat == "+" then
       blackout = true
+      shortblackout = false
     elseif beat == "|" then
       shortblackout = true
+      blackout = false
     elseif beat == ":" then
       changeImage()
     elseif beat == "*" then
