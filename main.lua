@@ -25,10 +25,20 @@ vec4 effect(vec4 color, Image tex, vec2 tc, vec2 pc) {
 }
 ]]
 blendshader = [[
+float overlay(float a, float b) {
+	return a < 0.5 ?
+    (2.0 * a * b) :
+    (1.0 - 2.0 * (1.0 - a) * (1.0 - b));
+}
+
 vec4 effect(vec4 color, Image tex, vec2 tc, vec2 pc) {
   vec4 texel = Texel(tex, tc);
-  vec3 c = 1.0 - 2.0 * (1.5 - texel.rgb) * (1.0 - color.rgb);
-  return vec4(c.r, c.g, c.b, texel.a);
+  return vec4(
+    overlay(color.r, texel.r),
+    overlay(color.g, texel.g),
+    overlay(color.b, texel.b),
+    texel.a
+  );
 }
 ]]
 
