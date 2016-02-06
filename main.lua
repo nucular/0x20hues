@@ -43,8 +43,8 @@ vec4 effect(vec4 color, Image tex, vec2 tc, vec2 pc) {
 ]]
 
 
-local BLURSTRENGTH = 0.01
-local BLURDURATION = 0.1
+local BLURSTRENGTH = 0.015
+local BLURDURATION = 0.15
 local SHUFFLE = false
 local LATENCY = 3072
 
@@ -204,11 +204,14 @@ local function loadRespack(file, name, draw)
               vblur = 0
               hblur = BLURSTRENGTH
             end
+
             changeColor()
             changeImage(#images)
+
             love.graphics.clear()
             love.graphics.origin()
             love.draw()
+
             love.graphics.setColor(0, 0, 0, 100)
             love.graphics.rectangle("fill", 0, 0, love.graphics.getWidth(), 80)
             love.graphics.setColor(255, 255, 255)
@@ -303,11 +306,11 @@ function love.load()
   blurshader = love.graphics.newShader(blurshader)
   blendshader = love.graphics.newShader(blendshader)
 
-  fxcanvas = love.graphics.newCanvas()
+  vblurcanvas = love.graphics.newCanvas()
+  hblurcanvas = love.graphics.newCanvas()
   blurshader:send("shift", {0, 0})
 
   acccanvas = love.graphics.newCanvas(200, 20)
-  acccanvas:clear(0, 0, 0)
 
   items = love.filesystem.getDirectoryItems("respacks")
   for i, v in ipairs(items) do
@@ -330,9 +333,11 @@ function love.draw()
   love.graphics.setBlendMode("alpha")
 
   if blackout == true or shortblackout == true then
-    love.graphics.setBackgroundColor(0, 0, 0)
+    love.graphics.clear(0, 0, 0)
     shortblackout = false
     return
+  else
+    love.graphics.clear(color)
   end
 
   local scale = height / image.data:getHeight()
@@ -346,21 +351,24 @@ function love.draw()
     xoff = width - (image.data:getWidth() * scale)
   end
 
-  fxcanvas:clear()
-  love.graphics.setCanvas(fxcanvas)
   love.graphics.setShader(blurshader)
-  blurshader:send("shift", {vblur, 0})
-  love.graphics.draw(image.data, xoff, height - (image.data:getHeight() * scale), 0, scale, scale)
-  blurshader:send("shift", {0, hblur})
-  love.graphics.draw(fxcanvas, 0, 0)
+  vblurcanvas:renderTo(function()
+    love.graphics.clear(0, 0, 0, 0)
+    blurshader:send("shift", {vblur, 0})
+    love.graphics.draw(image.data, xoff, height - (image.data:getHeight() * scale), 0, scale, scale)
+  end)
+  hblurcanvas:renderTo(function()
+    love.graphics.clear(0, 0, 0, 0)
+    blurshader:send("shift", {0, hblur})
+    love.graphics.draw(vblurcanvas, 0, 0)
+  end)
   love.graphics.setShader()
-  love.graphics.setCanvas()
+
   love.graphics.setColor(color)
   love.graphics.setShader(blendshader)
-  love.graphics.draw(fxcanvas, 0, 0)
+  love.graphics.draw(hblurcanvas, 0, 0)
   love.graphics.setShader()
   love.graphics.setColor(255, 255, 255)
-  love.graphics.setBackgroundColor(color)
 
   if not hidegui then
     local beattext = beat
@@ -471,7 +479,8 @@ function love.update(dt)
 end
 
 function love.resize(w, h)
-  fxcanvas = love.graphics.newCanvas(w, h)
+  vblurcanvas = love.graphics.newCanvas(w, h)
+  hblurcanvas = love.graphics.newCanvas(w, h)
 end
 
 function love.keypressed(b)
